@@ -59,10 +59,29 @@ const DEFAULT_STUDENT_DATA = {
     ]
   },
   transport: {
-    transportType: "—",
-    busNum: "—",
-    routeNum: "—",
-    stops: []
+    transportType: "Government Bus",
+    busNum: "Government Bus",
+    routeNum: "Crime Branch → Theppakulam",
+    route: "Crime Branch → Theppakulam",
+    morningTravelTime: "8:10 AM – 8:25 AM",
+    travelTime: "8:10 AM – 8:25 AM",
+    studentStop: "Theppakulam",
+    stops: [
+      {
+        id: "st_1",
+        name: "Crime Branch",
+        boardingTime: "8:10 AM",
+        departureTime: "8:10 AM",
+        isStudentStop: false
+      },
+      {
+        id: "st_2",
+        name: "Theppakulam",
+        boardingTime: "8:10 AM",
+        departureTime: "8:25 AM",
+        isStudentStop: true
+      }
+    ]
   }
 };
 
@@ -85,7 +104,26 @@ class StudentApp {
         if (!parsed.subjects || !parsed.subjects.sem1 || parsed.subjects.sem1.length === 0) {
           parsed.subjects = DEFAULT_STUDENT_DATA.subjects;
         }
-        if (!parsed.transport || !parsed.transport.stops) parsed.transport = DEFAULT_STUDENT_DATA.transport;
+        if (
+          !parsed.transport ||
+          !parsed.transport.transportType ||
+          parsed.transport.transportType === '—' ||
+          !parsed.transport.stops ||
+          parsed.transport.stops.length === 0 ||
+          !parsed.transport.stops.some(s => s.isStudentStop && s.name === 'Theppakulam')
+        ) {
+          parsed.transport = JSON.parse(JSON.stringify(DEFAULT_STUDENT_DATA.transport));
+        } else {
+          parsed.transport.transportType = DEFAULT_STUDENT_DATA.transport.transportType;
+          parsed.transport.busNum = DEFAULT_STUDENT_DATA.transport.busNum;
+          parsed.transport.routeNum = DEFAULT_STUDENT_DATA.transport.routeNum;
+          parsed.transport.route = DEFAULT_STUDENT_DATA.transport.route;
+          parsed.transport.morningTravelTime = DEFAULT_STUDENT_DATA.transport.morningTravelTime;
+          parsed.transport.travelTime = DEFAULT_STUDENT_DATA.transport.travelTime;
+          parsed.transport.studentStop = DEFAULT_STUDENT_DATA.transport.studentStop;
+          parsed.transport.stops = DEFAULT_STUDENT_DATA.transport.stops;
+        }
+        localStorage.setItem('personal_student_app_data', JSON.stringify(parsed));
         return parsed;
       } catch (e) {
         console.error("Error parsing saved student data:", e);
@@ -500,12 +538,20 @@ class StudentApp {
     return { yr1Pct, yr2Pct, overallPct, overallCgpa, semMetrics };
   }
 
-  // Render 4. Transport Sequence View
+  // Render 4. Transport Sequence View (Read-Only)
   renderTransport() {
     const t = this.data.transport;
-    document.getElementById('trans-type-display').textContent = t.transportType;
-    document.getElementById('trans-bus-display').textContent = t.busNum;
-    document.getElementById('trans-route-display').textContent = t.routeNum;
+    const typeElem = document.getElementById('trans-type-display');
+    if (typeElem) typeElem.textContent = `🚌 ${t.transportType || 'Government Bus'}`;
+
+    const routeElem = document.getElementById('trans-route-display');
+    if (routeElem) routeElem.textContent = `📍 ${t.routeNum || t.route || 'Crime Branch → Theppakulam'}`;
+
+    const timeElem = document.getElementById('trans-time-display');
+    if (timeElem) timeElem.textContent = `⏰ ${t.morningTravelTime || t.travelTime || '8:10 AM – 8:25 AM'}`;
+
+    const stopElem = document.getElementById('trans-stop-display');
+    if (stopElem) stopElem.textContent = `📌 My Stop: ${t.studentStop || 'Theppakulam'}`;
 
     const container = document.getElementById('transport-stops-container');
     if (!container) return;
@@ -540,25 +586,9 @@ class StudentApp {
             <span><i class="fa-solid fa-flag-checkered"></i> Departure: <strong>${stop.departureTime}</strong></span>
           </div>
         </div>
-        <div class="seq-actions">
-          <button class="icon-action-btn move" title="Move Up in Sequence" data-move-up="${index}" ${index === 0 ? 'disabled' : ''}>
-            <i class="fa-solid fa-arrow-up"></i>
-          </button>
-          <button class="icon-action-btn move" title="Move Down in Sequence" data-move-down="${index}" ${index === stops.length - 1 ? 'disabled' : ''}>
-            <i class="fa-solid fa-arrow-down"></i>
-          </button>
-          <button class="icon-action-btn edit" title="Edit Stop" data-edit-stop="${stop.id}">
-            <i class="fa-solid fa-pen"></i>
-          </button>
-          <button class="icon-action-btn delete" title="Delete Stop" data-delete-stop="${stop.id}">
-            <i class="fa-solid fa-trash"></i>
-          </button>
-        </div>
       `;
       container.appendChild(stopCard);
     });
-
-    this.attachTransportEventListeners();
   }
 
   attachTransportEventListeners() {
